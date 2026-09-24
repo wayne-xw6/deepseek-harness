@@ -205,7 +205,7 @@ pnpm run package:desktop:win:x64
 
 macOS arm64 命令要求 Apple Silicon。macOS x64 命令可以在 Intel macOS 或带 Rosetta 的 Apple Silicon 上运行。Windows x64 命令要求 Windows x64。Linux 不是受支持的 Desktop 发布目标。
 
-自行使用且不接入更新服务的 Windows 安装包，在 `.env.windows` 中设置 `DSH_DESKTOP_APP_ID` 和 `DSH_DESKTOP_LOCAL_ONLY=1`，再运行 `pnpm run package:desktop:win:x64:unsigned`。此模式仅适用于未签名的 Windows 打包：安装包不包含强制更新策略或自动更新源，后续更新需要重新手动安装。签名构建及其他平台构建仍须配置策略服务。
+自行使用且不接入更新服务的 Windows 安装包，在 `.env.windows` 中设置 `DSH_DESKTOP_APP_ID` 和 `DSH_DESKTOP_LOCAL_ONLY=1`，再运行 `pnpm run package:desktop:win:x64:unsigned`。此模式仅适用于未签名的 Windows 打包：安装包不包含强制更新策略或自动更新源，后续更新需要重新手动安装。应用文件会放在 ASAR 归档之外，使原生 LibreOffice 程序在打包后运行检查中能够读取程序目录。签名构建及其他平台构建仍须配置策略服务。
 
 每个目标都在 `apps/desktop/.desktop-build/targets/<target>/` 下持有自己的打包输入、已准备运行时、包集合、dsh 依赖树、pnpm 准备状态、未打包应用、更新元数据和最终产物。Electron 归档缓存继续由 `.desktop-build/downloads` 共享，因为每个归档文件名都包含版本、平台和架构，并且在解包前经过验证。目标构建绝不读取其他目标的可变准备状态。
 

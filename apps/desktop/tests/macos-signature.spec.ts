@@ -127,6 +127,7 @@ describe('desktop macOS release signature', () => {
     const environment = { DSH_DESKTOP_APP_ID: 'com.example.personal', DSH_DESKTOP_LOCAL_ONLY: '1',
       DSH_DESKTOP_TARGET_PLATFORM: 'win32', DSH_DESKTOP_UNSIGNED: '1' }
     const config = createElectronBuilderConfig(environment, 'win32', 'x64')
+    expect(config.asar).toBe(false)
     expect(config.publish).toBeNull()
     expect(JSON.parse(JSON.stringify(config.extraMetadata))).toEqual({ dshDesktopAppId: 'com.example.personal' })
     expect(() => createElectronBuilderConfig({ ...environment, DSH_DESKTOP_UNSIGNED: '0' }, 'win32', 'x64'))

@@ -203,7 +203,7 @@ pnpm run package:desktop:win:x64
 
 The macOS arm64 command requires Apple Silicon. The macOS x64 command runs on Intel macOS or Apple Silicon with Rosetta. The Windows x64 command requires Windows x64. Linux is not a supported Desktop release target.
 
-For a personal Windows installer without update services, set `DSH_DESKTOP_APP_ID` and `DSH_DESKTOP_LOCAL_ONLY=1` in `.env.windows`, then run `pnpm run package:desktop:win:x64:unsigned`. This mode is limited to unsigned Windows packaging: it embeds no mandatory-update policy or automatic-update feed, so updates require a new manual installation. Signed and other platform builds still require the configured policy service.
+For a personal Windows installer without update services, set `DSH_DESKTOP_APP_ID` and `DSH_DESKTOP_LOCAL_ONLY=1` in `.env.windows`, then run `pnpm run package:desktop:win:x64:unsigned`. This mode is limited to unsigned Windows packaging: it embeds no mandatory-update policy or automatic-update feed, so updates require a new manual installation. It leaves application files outside ASAR so the native LibreOffice helper can read its program directory during packaged runtime checks. Signed and other platform builds still require the configured policy service.
 
 Each target owns its packed package inputs, prepared runtime, package set, dsh tree, pnpm preparation state, unpacked application, update metadata, and final artifacts under `apps/desktop/.desktop-build/targets/<target>/`. The Electron archive cache remains shared under `.desktop-build/downloads` because every archive name includes its version, platform, and architecture and is verified before extraction. A target build never consumes another target's mutable preparation state.
 
