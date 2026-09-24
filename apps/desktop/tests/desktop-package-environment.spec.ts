@@ -139,6 +139,20 @@ describe('Desktop local packaging configuration', () => {
     }).not.toThrow()
   })
 
+  it('limits policy-free packaging to explicit unsigned Windows builds', async () => {
+    await withDirectory(async (directory) => {
+      await writeFile(join(directory, '.env.windows'), 'DSH_DESKTOP_APP_ID=com.example.personal\nDSH_DESKTOP_LOCAL_ONLY=1\n')
+      const environment = loadDesktopPackageEnvironment('win32', { DSH_DESKTOP_LOCAL_ONLY: '0' }, directory)
+      expect(environment.DSH_DESKTOP_LOCAL_ONLY).toBe('1')
+      expect(() => validateDesktopPackageEnvironment(environment, WINDOWS, { unsigned: true })).not.toThrow()
+      expect(() => validateDesktopPackageEnvironment(environment, WINDOWS)).toThrow('requires unsigned Windows packaging')
+      expect(() => validateDesktopPackageEnvironment(environment, WINDOWS, { prepareOnly: true })).toThrow('requires unsigned Windows packaging')
+      expect(() => validateDesktopPackageEnvironment(environment, MACOS, { unsigned: true })).toThrow('requires unsigned Windows packaging')
+      expect(() => validateDesktopPackageEnvironment({ ...environment, DSH_DESKTOP_LOCAL_ONLY: 'yes' }, WINDOWS, { unsigned: true }))
+        .toThrow('must be 0 or 1')
+    })
+  })
+
   it('accepts one local npm registry mirror and rejects other registry forms', () => {
     const release = { ...POLICY, DSH_DESKTOP_APP_ID: RELEASE.DSH_DESKTOP_APP_ID }
     expect(() => {

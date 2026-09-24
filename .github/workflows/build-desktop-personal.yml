@@ -1,0 +1,53 @@
+name: Build personal Windows desktop installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version in the root package.json after syncing the fork
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Enable Windows junction creation
+        shell: pwsh
+        run: >-
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"
+          /t REG_DWORD /f /v "AllowDevelopmentWithoutDevLicense" /d "1"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
+      - name: Configure personal build
+        shell: pwsh
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+        run: |
+          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
+          if ($env:BUILD_VERSION -ne $version) { throw "Enter the exact package.json version: $version" }
+          "DSH_DESKTOP_APP_ID=com.wayne-xw6.dsh`nDSH_DESKTOP_LOCAL_ONLY=1" |
+            Set-Content -LiteralPath apps/desktop/.env.windows -Encoding utf8
+      - name: Package unsigned installer
+        shell: pwsh
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+        run: pnpm --dir apps/desktop run package:win:x64:unsigned --build-version $env:BUILD_VERSION
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personal-desktop-win-x64-${{ inputs.version }}
+          path: apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/*.exe
+          if-no-files-found: error
+          retention-days: 7

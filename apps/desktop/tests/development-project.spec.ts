@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -31,6 +31,27 @@ afterEach(() => {
 })
 
 describe('desktop development project', () => {
+  it('skips hoisted links to optional packages absent on this platform', () => {
+    const root = temporaryRoot()
+    const cli = join(root, 'cli')
+    const host = join(root, 'host')
+    const hoisted = join(root, 'hoisted')
+    mkdirSync(cli)
+    mkdirSync(join(host, 'lib'), { recursive: true })
+    mkdirSync(join(hoisted, '@optional'), { recursive: true })
+    writeFileSync(join(cli, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '1.2.3' }))
+    writeFileSync(join(host, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-desktop-host', version: '1.2.3' }))
+    writeFileSync(join(host, 'lib/index.js'), '')
+    symlinkSync(join(root, 'missing-scoped'), join(hoisted, '@optional', 'darwin'), process.platform === 'win32' ? 'junction' : 'dir')
+    symlinkSync(join(root, 'missing-plain'), join(hoisted, 'darwin'), process.platform === 'win32' ? 'junction' : 'dir')
+
+    const project = prepareDevelopmentProject({ projectDir: join(root, 'runtime'), cliDir: cli, hostDir: host, dependencyDir: hoisted, release: release(), target: 'win-x64' })
+    expect(existsSync(join(project, 'node_modules', '@optional', 'darwin'))).toBe(false)
+    expect(existsSync(join(project, 'node_modules', 'darwin'))).toBe(false)
+    const descriptor = JSON.parse(readFileSync(join(project, 'desktop-runtime.json'), 'utf8')) as { sharedPackages: { name: string }[] }
+    expect(descriptor.sharedPackages.map(({ name }) => name)).toEqual(['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host'])
+  })
+
   it('includes declared workspace packages missing from the hoist directory in the runtime inventory', () => {
     const root = temporaryRoot()
     const cli = join(root, 'cli')
