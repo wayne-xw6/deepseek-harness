@@ -28,14 +28,25 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+      - name: Prepare short build path
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath 'D:\dsh') { throw 'D:\dsh is already in use' }
+          New-Item -ItemType Directory -Path 'D:\dsh' | Out-Null
+          robocopy $env:GITHUB_WORKSPACE 'D:\dsh' /E /XJ /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -gt 7) { throw "Workspace copy failed: $LASTEXITCODE" }
       - name: Install dependencies
         shell: pwsh
-        run: pnpm install --frozen-lockfile
+        run: |
+          Set-Location -LiteralPath 'D:\dsh'
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Configure personal build
         shell: pwsh
         env:
           BUILD_VERSION: ${{ inputs.version }}
         run: |
+          Set-Location -LiteralPath 'D:\dsh'
           $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
           if ($env:BUILD_VERSION -ne $version) { throw "Enter the exact package.json version: $version" }
           "DSH_DESKTOP_APP_ID=com.wayne-xw6.dsh`nDSH_DESKTOP_LOCAL_ONLY=1" |
@@ -45,14 +56,30 @@ jobs:
         env:
           BUILD_VERSION: ${{ inputs.version }}
         run: |
-          if (Test-Path -LiteralPath 'Q:\') { throw 'Q: is already in use' }
-          subst Q: $env:GITHUB_WORKSPACE
-          Set-Location -LiteralPath 'Q:\'
+          Set-Location -LiteralPath 'D:\dsh'
           pnpm --dir apps/desktop run package:win:x64:unsigned --build-version $env:BUILD_VERSION
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Diagnose packaged Office files
+        if: failure()
+        shell: pwsh
+        run: |
+          $base = 'D:\dsh\apps\desktop\.desktop-build\targets\win-x64'
+          foreach ($name in @('libreoffice-kit-win32-x64', 'libreoffice-kit')) {
+            $source = Join-Path $base "dsh\node_modules\@deepseek-ai\$name"
+            $target = Join-Path $base "unsigned-artifacts\win-unpacked\resources\app\dsh\node_modules\@deepseek-ai\$name"
+            if (-not (Test-Path -LiteralPath $source) -or -not (Test-Path -LiteralPath $target)) {
+              Write-Output "$name missing root: source=$(Test-Path -LiteralPath $source) target=$(Test-Path -LiteralPath $target)"
+              continue
+            }
+            $sourceFiles = @(Get-ChildItem -LiteralPath $source -Recurse -File | ForEach-Object { $_.FullName.Substring($source.Length + 1) })
+            $targetFiles = @(Get-ChildItem -LiteralPath $target -Recurse -File | ForEach-Object { $_.FullName.Substring($target.Length + 1) })
+            $missing = @(Compare-Object $sourceFiles $targetFiles | Where-Object SideIndicator -eq '<=' | Select-Object -ExpandProperty InputObject)
+            Write-Output "$name source=$($sourceFiles.Count) packaged=$($targetFiles.Count) missing=$($missing.Count) longest-path=$((Get-ChildItem -LiteralPath $target -Recurse -File | ForEach-Object { $_.FullName.Length } | Measure-Object -Maximum).Maximum)"
+            $missing | Select-Object -First 20
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: personal-desktop-win-x64-${{ inputs.version }}
-          path: apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/*.exe
+          path: D:/dsh/apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/*.exe
           if-no-files-found: error
           retention-days: 7
