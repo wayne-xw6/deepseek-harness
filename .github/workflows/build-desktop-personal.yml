@@ -35,6 +35,7 @@ jobs:
           New-Item -ItemType Directory -Path 'D:\dsh' | Out-Null
           robocopy $env:GITHUB_WORKSPACE 'D:\dsh' /E /XJ /NFL /NDL /NJH /NJS /NP
           if ($LASTEXITCODE -gt 7) { throw "Workspace copy failed: $LASTEXITCODE" }
+          $global:LASTEXITCODE = 0
       - name: Install dependencies
         shell: pwsh
         run: |
