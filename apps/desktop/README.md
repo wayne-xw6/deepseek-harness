@@ -114,7 +114,7 @@ Recovery waits for Host shutdown before changing plugin activation. The native r
 
 The development application menu offers Reload Page (Cmd+R on macOS, Ctrl+R elsewhere) and Restart App and Host. Restart waits for Host shutdown before relaunching Electron and starting a new Host; neither action rebuilds source files.
 
-`dev:desktop` builds the current Host, client bundles, Web frontend, and Electron shell, projects the built CLI and private Desktop Host packages with their workspace dependencies into a disposable desktop npm project, and launches Electron without resolving dsh from npm:
+`dev:desktop` builds the current Host, client bundles, Web frontend, and Electron shell, projects the built CLI and private Desktop Host packages with their workspace dependencies into a disposable desktop npm project, and launches Electron without resolving dsh from npm. The projection skips hoisted links to optional packages absent on the current platform:
 
 ```sh
 pnpm run dev:desktop
@@ -202,6 +202,8 @@ pnpm run package:desktop:win:x64
 ```
 
 The macOS arm64 command requires Apple Silicon. The macOS x64 command runs on Intel macOS or Apple Silicon with Rosetta. The Windows x64 command requires Windows x64. Linux is not a supported Desktop release target.
+
+For a personal Windows installer without update services, set `DSH_DESKTOP_APP_ID` and `DSH_DESKTOP_LOCAL_ONLY=1` in `.env.windows`, then run `pnpm run package:desktop:win:x64:unsigned`. This mode is limited to unsigned Windows packaging: it embeds no mandatory-update policy or automatic-update feed, so updates require a new manual installation. Signed and other platform builds still require the configured policy service.
 
 Each target owns its packed package inputs, prepared runtime, package set, dsh tree, pnpm preparation state, unpacked application, update metadata, and final artifacts under `apps/desktop/.desktop-build/targets/<target>/`. The Electron archive cache remains shared under `.desktop-build/downloads` because every archive name includes its version, platform, and architecture and is verified before extraction. A target build never consumes another target's mutable preparation state.
 

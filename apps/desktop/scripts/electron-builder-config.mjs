@@ -51,7 +51,10 @@ export function createElectronBuilderConfig(
   preparedRuntimeVersion = undefined,
 ) {
   const appId = resolveDesktopAppId(env)
-  const policy = resolveDesktopPolicyEnvironment(env)
+  const localOnly = env.DSH_DESKTOP_LOCAL_ONLY
+  if (localOnly !== undefined && localOnly !== '0' && localOnly !== '1') {
+    throw new Error('desktop package: DSH_DESKTOP_LOCAL_ONLY must be 0 or 1')
+  }
   const targetPlatform = env.DSH_DESKTOP_TARGET_PLATFORM
   const resolvedPlatform = targetPlatform ?? hostPlatform
   const resolvedArch = env.DSH_DESKTOP_TARGET_ARCH ?? hostArch
@@ -60,6 +63,10 @@ export function createElectronBuilderConfig(
   }
   const unsigned = env.DSH_DESKTOP_UNSIGNED === '1'
   if (unsigned && resolvedPlatform !== 'win32') throw new Error('desktop package: unsigned builds require Windows')
+  if (localOnly === '1' && (!unsigned || resolvedPlatform !== 'win32')) {
+    throw new Error('desktop package: DSH_DESKTOP_LOCAL_ONLY requires unsigned Windows packaging')
+  }
+  const policy = localOnly === '1' ? undefined : resolveDesktopPolicyEnvironment(env)
   const packagesMacOS = targetPlatform === 'darwin' || (targetPlatform === undefined && hostPlatform === 'darwin')
   const packagesWindows = resolvedPlatform === 'win32'
   if (resolvedPlatform === 'win32') installWindowsDirectoryInstaller()

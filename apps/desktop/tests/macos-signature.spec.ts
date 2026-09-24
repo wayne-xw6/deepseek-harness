@@ -122,6 +122,19 @@ describe('desktop macOS release signature', () => {
     })
   })
 
+  it('omits update services from a personal unsigned Windows installer', async () => {
+    const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
+    const environment = { DSH_DESKTOP_APP_ID: 'com.example.personal', DSH_DESKTOP_LOCAL_ONLY: '1',
+      DSH_DESKTOP_TARGET_PLATFORM: 'win32', DSH_DESKTOP_UNSIGNED: '1' }
+    const config = createElectronBuilderConfig(environment, 'win32', 'x64')
+    expect(config.publish).toBeNull()
+    expect(JSON.parse(JSON.stringify(config.extraMetadata))).toEqual({ dshDesktopAppId: 'com.example.personal' })
+    expect(() => createElectronBuilderConfig({ ...environment, DSH_DESKTOP_UNSIGNED: '0' }, 'win32', 'x64'))
+      .toThrow('requires unsigned Windows packaging')
+    expect(() => createElectronBuilderConfig({ ...environment, DSH_DESKTOP_LOCAL_ONLY: 'invalid' }, 'win32', 'x64'))
+      .toThrow('must be 0 or 1')
+  })
+
   it('rejects unsigned macOS builds and malformed signing modes', async () => {
     const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
     expect(() => createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: '1' }))
