@@ -44,7 +44,12 @@ jobs:
         shell: pwsh
         env:
           BUILD_VERSION: ${{ inputs.version }}
-        run: pnpm --dir apps/desktop run package:win:x64:unsigned --build-version $env:BUILD_VERSION
+        run: |
+          if (Test-Path -LiteralPath 'Q:\') { throw 'Q: is already in use' }
+          subst Q: $env:GITHUB_WORKSPACE
+          Set-Location -LiteralPath 'Q:\'
+          pnpm --dir apps/desktop run package:win:x64:unsigned --build-version $env:BUILD_VERSION
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: personal-desktop-win-x64-${{ inputs.version }}
