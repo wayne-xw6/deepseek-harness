@@ -1,6 +1,8 @@
 name: Build personal Windows desktop installer
 
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
     inputs:
       version:
@@ -43,19 +45,23 @@ jobs:
           pnpm install --frozen-lockfile
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Configure personal build
+        id: build
         shell: pwsh
         env:
-          BUILD_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           Set-Location -LiteralPath 'D:\dsh'
           $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
-          if ($env:BUILD_VERSION -ne $version) { throw "Enter the exact package.json version: $version" }
+          if ($env:REQUESTED_VERSION -and $env:REQUESTED_VERSION -ne $version) {
+            throw "Enter the exact package.json version: $version"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "DSH_DESKTOP_APP_ID=com.wayne-xw6.dsh`nDSH_DESKTOP_LOCAL_ONLY=1" |
             Set-Content -LiteralPath apps/desktop/.env.windows -Encoding utf8
       - name: Package unsigned installer
         shell: pwsh
         env:
-          BUILD_VERSION: ${{ inputs.version }}
+          BUILD_VERSION: ${{ steps.build.outputs.version }}
         run: |
           Set-Location -LiteralPath 'D:\dsh'
           pnpm --dir apps/desktop run package:win:x64:unsigned --build-version $env:BUILD_VERSION
@@ -80,7 +86,7 @@ jobs:
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: personal-desktop-win-x64-${{ inputs.version }}
+          name: personal-desktop-win-x64-${{ steps.build.outputs.version }}
           path: D:/dsh/apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/*.exe
           if-no-files-found: error
           retention-days: 7
