@@ -205,6 +205,8 @@ The macOS arm64 command requires Apple Silicon. The macOS x64 command runs on In
 
 For a personal Windows installer without update services, set `DSH_DESKTOP_APP_ID` and `DSH_DESKTOP_LOCAL_ONLY=1` in `.env.windows`, then run `pnpm run package:desktop:win:x64:unsigned`. This mode is limited to unsigned Windows packaging: it embeds no mandatory-update policy or automatic-update feed, so updates require a new manual installation. It leaves application files outside ASAR so the native LibreOffice helper can read its program directory during packaged runtime checks. Signed and other platform builds still require the configured policy service.
 
+In the personal fork, `.github/workflows/sync-upstream-personal.yml` checks upstream daily and proposes changes in a PR for review. Merging that PR into `master` triggers `.github/workflows/build-desktop-personal.yml` to build and upload the unsigned installer; manual workflow dispatch remains available. The artifact expires after seven days, and installing a new version still requires running its EXE locally.
+
 Each target owns its packed package inputs, prepared runtime, package set, dsh tree, pnpm preparation state, unpacked application, update metadata, and final artifacts under `apps/desktop/.desktop-build/targets/<target>/`. The Electron archive cache remains shared under `.desktop-build/downloads` because every archive name includes its version, platform, and architecture and is verified before extraction. A target build never consumes another target's mutable preparation state.
 
 ### Runtime file selection
